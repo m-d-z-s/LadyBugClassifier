@@ -4,6 +4,7 @@ import me.mdzs.ladybugclassifier.utils.Insect
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.pow
 
 /**
  * NeuralNetwork is implementation of a classifier. It contains fields:
@@ -54,7 +55,7 @@ class NeuralNetwork(
         data.forEach { insect ->
             captureData(insect)
             feedForward()
-            predictions.add(if (outputs[0].value >= 0.5) 1 else 0)
+            predictions.add(if (outputs[0].value > 0.5) 1 else 0)
         }
 
         return predictions
@@ -86,7 +87,7 @@ class NeuralNetwork(
             neuron.error = sigmoidDerivative(neuron.value) * neuron.weights[0] * outputs[0].error
         }
 
-        return outputs[0].error
+        return (outputs[0].error).pow(2)
     }
 
     private fun feedForward() {
