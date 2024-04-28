@@ -88,10 +88,10 @@ class NeuralNetwork(
 
     private fun feedForward() {
         hiddens.forEachIndexed { index, neuron ->
-            neuron.value = sigmoid(dotProduct(inputs, index))
+            neuron.value = sigmoid(dotProduct(inputs, index, neuron.threshold))
         }
         outputs.forEachIndexed { index, neuron ->
-            neuron.value = sigmoid(dotProduct(hiddens, index))
+            neuron.value = sigmoid(dotProduct(hiddens, index, neuron.threshold))
         }
     }
 
@@ -110,12 +110,12 @@ class NeuralNetwork(
         return listNeurons
     }
 
-    private fun dotProduct(neurons: List<Neuron>, index: Int): Double {
+    private fun dotProduct(neurons: List<Neuron>, index: Int, nextThreshold: Double): Double {
         var sum = 0.0
         neurons.forEach { neuron ->
-            sum += neuron.value * neuron.weights[index] + neuron.threshold
+            sum += neuron.value * neuron.weights[index]
         }
-        return sum
+        return sum + nextThreshold
     }
 
 

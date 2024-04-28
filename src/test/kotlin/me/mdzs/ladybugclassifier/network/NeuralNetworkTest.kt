@@ -16,7 +16,7 @@ class NeuralNetworkTest {
         val insects = DataGenerator.generateData(50)
         val testInsects = DataGenerator.generateData(10)
 
-        neuralNetwork.train(insects,1000)
+        neuralNetwork.train(insects,50)
         println(neuralNetwork.averageLosses.min())
         val losses = neuralNetwork.averageLosses
         val file = File("file.txt")
