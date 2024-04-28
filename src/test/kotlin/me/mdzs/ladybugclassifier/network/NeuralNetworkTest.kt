@@ -10,13 +10,13 @@ class NeuralNetworkTest {
     @Test // H7, S20, E100
     fun test1() {
         val neuralNetwork = NeuralNetwork(
-            shape = NetworkShape(2, 10, 1),
+            shape = NetworkShape(2, 2, 1),
             learningRate = 0.01
         )
         val insects = DataGenerator.generateData(50)
         val testInsects = DataGenerator.generateData(10)
 
-        neuralNetwork.train(insects,30)
+        neuralNetwork.train(insects,1000)
         println(neuralNetwork.averageLosses.min())
         val losses = neuralNetwork.averageLosses
         val file = File("file.txt")
