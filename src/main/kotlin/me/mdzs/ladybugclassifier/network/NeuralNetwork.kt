@@ -1,18 +1,11 @@
 package me.mdzs.ladybugclassifier.network
 
 import me.mdzs.ladybugclassifier.utils.Insect
-import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.max
-import kotlin.math.pow
+import kotlin.random.Random
 
-/**
- * NeuralNetwork is implementation of a classifier. It contains fields:
- *
- * 1. neurons
- * 2. weights
- * 3. thresholds
- */
 class NeuralNetwork(
     val shape: NetworkShape,
     val learningRate: Double
@@ -26,27 +19,27 @@ class NeuralNetwork(
     public fun train(data: List<Insect>, epochs: Int) {
         averageLosses = emptyList<Double>().toMutableList()
         repeat(epochs) {
+            val errors = mutableListOf<Double>()
+            var gradientSum = 0.0
 
-            print("Epoch $it began. ")
+            val mixedData = data.shuffled()
 
-            val losses = mutableListOf<Double>()
-            data.forEach { insect ->
+            mixedData.forEach { insect ->
                 captureData(insect)
-
                 val y = insect.type
 
                 feedForward()
 
-                losses.add(propagateBack(y))
-
-                updateWeights()
-                updateThresholds()
-
+                val error = cE(y, outputs[0].value)
+                val currentGradient = error * sigmoidDerivative(outputs[0].inputSum)
+                gradientSum += currentGradient
+                errors.add((error))
             }
 
-            val averageLoss = losses.average()
-            println("Current average loss = $averageLoss")
-            averageLosses.add(averageLoss)
+            propagateBack(gradientSum)
+
+            val losses = errors.average()
+            averageLosses.add(losses)
         }
     }
 
@@ -67,58 +60,63 @@ class NeuralNetwork(
         inputs[1].value = insect.width
     }
 
-    private fun updateWeights() {
-        TODO()
-    }
+    private fun propagateBack(gradientSum: Double) {
+        outputs[0].gradient = gradientSum // gradient
+        outputs[0].bias -= learningRate * outputs[0].gradient * outputs[0].value // o[0] bias update
 
-    private fun updateThresholds() {
-        TODO()
-    }
-
-
-    private fun propagateBack(y: Int): Double {
-        outputs[0].error = (y.toDouble() - outputs[0].value).pow(2)
-
-        hiddens.forEachIndexed { index, neuron ->
-            neuron.error = sigmoidDerivative(neuron.value) * neuron.weights[0] * outputs[0].error
+        hiddens.forEach { hiddenNeuron ->
+            // weights
+            hiddenNeuron.weights[0] += learningRate * outputs[0].gradient * hiddenNeuron.value // wi = wi-1 - lr * gradient * hi
+            hiddenNeuron.gradient =
+                outputs[0].gradient * hiddenNeuron.weights[0] * reluDerivative(hiddenNeuron.inputSum) // gradient * updated_wi * f'(hi)
+            // biases
+            hiddenNeuron.bias -= learningRate * hiddenNeuron.gradient * hiddenNeuron.value
         }
 
-        return outputs[0].error
+        inputs.forEach { inputNeuron ->
+            hiddens.forEachIndexed { j, hiddenNeuron ->
+                inputNeuron.weights[j] += learningRate * hiddenNeuron.gradient * inputNeuron.value
+            }
+        }
     }
+
+    private fun cE(y: Int, p: Double): Double = - y * ln(p) - (1 - y) * ln(1 - p)
 
     private fun feedForward() {
-        hiddens.forEachIndexed { index, neuron ->
-            neuron.value = sigmoid(dotProduct(inputs, index, neuron.threshold))
+        hiddens.forEachIndexed { index, hiddenNeuron ->
+            hiddenNeuron.inputSum = dotProduct(inputs, index) + hiddenNeuron.bias
+            hiddenNeuron.value = relu(hiddenNeuron.inputSum)
         }
-        outputs.forEachIndexed { index, neuron ->
-            neuron.value = sigmoid(dotProduct(hiddens, index, neuron.threshold))
+        outputs.forEachIndexed { index, outputNeuron ->
+            outputNeuron.inputSum = dotProduct(hiddens, index) + outputNeuron.bias
+            outputNeuron.value = sigmoid(outputNeuron.inputSum)
         }
     }
 
 
     private fun initLayer(layerSize: Int, nextLayerSize: Int): List<Neuron> {
+        val randomizer = Random(37)
+
         val listNeurons = mutableListOf<Neuron>()
         repeat(layerSize) {
             listNeurons.add(
                 Neuron(
-                    0.0,
+                    value = 0.0,
                     weights = initWeights(nextLayerSize),
-                    threshold = initThresholds(layerSize)[it]
+                    bias = randomizer.nextDouble(-1.0, 1.0)
                 )
             )
         }
         return listNeurons
     }
 
-    private fun dotProduct(neurons: List<Neuron>, index: Int, nextThreshold: Double): Double {
+    private fun dotProduct(neurons: List<Neuron>, index: Int): Double {
         var sum = 0.0
         neurons.forEach { neuron ->
             sum += neuron.value * neuron.weights[index]
         }
-        return sum + nextThreshold
+        return sum
     }
-
-
     private fun sigmoid(x: Double): Double = 1 / (1 + exp(-x))
     private fun sigmoidDerivative(x: Double): Double = sigmoid(x) * (1 - sigmoid(x))
 
@@ -130,21 +128,14 @@ class NeuralNetwork(
 
 
     private fun initWeights(sizeOut: Int): MutableList<Double> {
+        val randomizer = Random(37)
+
         val weights = mutableListOf<Double>()
         repeat(sizeOut) {
-            weights.add(Math.random())
+            weights.add(randomizer.nextDouble(0.0, 0.5))
         }
 
         return weights
-    }
-
-    private fun initThresholds(size: Int): MutableList<Double> {
-        val thresholds = mutableListOf<Double>()
-        repeat(size) {
-            thresholds.add(Math.random())
-        }
-
-        return thresholds
     }
 }
 
